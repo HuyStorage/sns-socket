@@ -1,0 +1,12 @@
+CMD Springboot Post Notification
+{
+	"cmd": "BACKEND_POST_NOTIFICATION",
+	"app": "BACKEND_APP",
+	"data": {
+		"kind": 1,
+		"app": "ELMS",
+		"message": "Noi dung msg here",
+		"userId": 1234,
+		"cmd": "BACKEND_POST_NOTIFICATION"
+	}
+}
