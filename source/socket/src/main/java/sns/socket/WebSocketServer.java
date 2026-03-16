@@ -43,7 +43,7 @@ public final class WebSocketServer {
 
     public static final int PORT = Integer.valueOf(QueueService.getInstance().getStringResource("server.ws.port"));
     public static void main(String[] args) throws Exception {
-        RedisService.getInstance().startRedis();
+//        RedisService.getInstance().startRedis();
 
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"));   // It will set UTC timezone
 

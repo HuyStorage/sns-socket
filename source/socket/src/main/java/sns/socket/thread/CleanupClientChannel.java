@@ -1,7 +1,7 @@
 package sns.socket.thread;
 
-import sns.socket.utils.SocketService;
 import org.apache.logging.log4j.Logger;
+import sns.socket.utils.SocketService;
 
 import java.util.TimerTask;
 
@@ -12,6 +12,6 @@ public class CleanupClientChannel extends TimerTask {
     public void run() {
         LOG.info("#############============>XXXX Clean up key");
         SocketService.getInstance().scanAndRemoveChannel();
-        LOG.info("#############============>XXXX Clean up key Done. Size: "+SocketService.getInstance().countChannelOrder());
+        LOG.info("#############============>XXXX Clean up key Done. Size: " + SocketService.getInstance().countChannelOrder());
     }
 }

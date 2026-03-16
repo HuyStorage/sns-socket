@@ -5,7 +5,7 @@ import sns.socket.model.ABasicPushRequest;
 
 @Data
 public class PushNotiRequest extends ABasicPushRequest {
-    private String message;
-    private String app;
-    private Integer kind;
+    private String cmd;
+    private String subCmd;
+    private String data;
 }

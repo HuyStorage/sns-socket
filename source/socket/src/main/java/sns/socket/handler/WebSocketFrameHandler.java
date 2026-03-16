@@ -11,14 +11,13 @@ import io.netty.handler.timeout.IdleStateEvent;
 import org.apache.logging.log4j.Logger;
 import sns.socket.constant.NotiConstant;
 import sns.socket.jwt.UserSession;
-import sns.socket.thread.ClientHandler;
 import sns.socket.thread.SocketThread;
 import sns.socket.utils.SocketService;
 
 public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocketFrame> {
 
     private static final Logger LOG = org.apache.logging.log4j.LogManager.getLogger(WebSocketFrameHandler.class);
-    private StringBuilder partialText = new StringBuilder();
+    private final StringBuilder partialText = new StringBuilder();
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, WebSocketFrame frame) throws Exception {
@@ -60,31 +59,24 @@ public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocket
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         LOG.error(cause.getMessage(), cause);
-        SocketService.getInstance().removeChannel(ctx.channel());
+        handleRemoveChannel(ctx);
         ctx.close();
     }
-
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        String token = ctx.channel().attr(NotiConstant.TOKEN).get();
-        UserSession userSession = UserSession.fromToken(token);
-        if (userSession != null) {
-            ClientHandler.getInstance().handleDeleteClientSession(userSession, ctx);
-        }
-        SocketService.getInstance().removeChannel(ctx.channel());
-        ctx.close();
+        handleRemoveChannel(ctx);
         super.channelInactive(ctx);
     }
 
-     /**
+    /**
      * ALL_IDLE => No data was either received or sent for a while.
      * READER_IDLE => No data was received for a while.
      * WRITER_IDLE => No data was sent for a while.
-     * * */
+     * *
+     */
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-
         if (evt instanceof IdleStateEvent) {
             //send 1 ping to detect channel live or die
             if (!ctx.channel().isOpen() || !ctx.channel().isActive()) {
@@ -96,6 +88,16 @@ public class WebSocketFrameHandler extends SimpleChannelInboundHandler<WebSocket
             super.userEventTriggered(ctx, evt);
         }
 
+    }
+
+    private void handleRemoveChannel(ChannelHandlerContext ctx) {
+        String token = ctx.channel().attr(NotiConstant.TOKEN).get();
+        UserSession userSession = UserSession.fromToken(token);
+        if (userSession != null) {
+            SocketService.getInstance().removeClientChannel(userSession);
+        }
+//        SocketService.getInstance().removeChannel(ctx.channel());
+        ctx.close();
     }
 
 }

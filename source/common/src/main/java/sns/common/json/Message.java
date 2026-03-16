@@ -1,6 +1,9 @@
 package sns.common.json;
 
-import com.google.gson.*;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializer;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -10,15 +13,14 @@ import java.lang.reflect.Type;
 public class Message implements Serializable {
     private String cmd = null;
     private String subCmd = null;
-    private Integer platform = null;
-    private String clientVersion;
+    private String app;
 
     private Object data = null;
     private String msg = null;
     private String token;
+    private String tenantId;
     private Integer responseCode;
 
-    private String app;
     private String channelId;
 
     static Gson GSON = new GsonBuilder()

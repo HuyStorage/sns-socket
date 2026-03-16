@@ -25,10 +25,6 @@ public class MyChannelWSGroup {
         return instance;
     }
 
-    public String getIdChannel(Channel channel) {
-        return SocketService.getInstance().getIdChannel(channel);
-    }
-
     public void sendMessage(Channel channel, String message) {
         if (channel != null && channel.isActive()) {
             try {

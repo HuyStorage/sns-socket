@@ -1,17 +1,15 @@
 package sns.socket.thread;
 
 import io.netty.channel.ChannelHandlerContext;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import sns.common.json.Message;
 import sns.socket.cmd.ResponseCode;
 import sns.socket.handler.MyChannelWSGroup;
 import sns.socket.jwt.UserSession;
 import sns.socket.model.ClientChannel;
 import sns.socket.model.response.ClientInfoResponse;
-import sns.socket.redis.RedisService;
-import sns.socket.utils.AESUtils;
 import sns.socket.utils.SocketService;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -21,23 +19,23 @@ public class ClientHandler {
     private static final Logger LOG = LogManager.getLogger(ClientHandler.class);
     private static ClientHandler instance = null;
 
-    private ClientHandler(){
+    private ClientHandler() {
 
     }
 
-    public static ClientHandler getInstance(){
-        if(instance == null){
+    public static ClientHandler getInstance() {
+        if (instance == null) {
             instance = new ClientHandler();
         }
         return instance;
     }
 
-    private void sendErrorMsg(ChannelHandlerContext channelHandlerContext, Message oldRequest, String msg){
+    private void sendErrorMsg(ChannelHandlerContext channelHandlerContext, Message oldRequest, String msg) {
         Message response = new Message();
         response.setCmd(oldRequest.getCmd());
         response.setMsg(msg);
         response.setResponseCode(ResponseCode.RESPONSE_CODE_ERROR);
-        MyChannelWSGroup.getInstance().sendMessage(channelHandlerContext.channel(),response.toJson());
+        MyChannelWSGroup.getInstance().sendMessage(channelHandlerContext.channel(), response.toJson());
     }
 
 
@@ -45,16 +43,15 @@ public class ClientHandler {
         UserSession userSession = UserSession.fromToken(message.getToken());
         message.setToken(null);
         message.setChannelId(null);
-        if(userSession != null){
+        if (userSession != null) {
             handleCacheClientSession(userSession, channelHandlerContext);
             message.setData(new ClientInfoResponse());
-            message.setMsg("Ping success with channel ID: " + MyChannelWSGroup.getInstance().getIdChannel(channelHandlerContext.channel()));
-            message.setChannelId(MyChannelWSGroup.getInstance().getIdChannel(channelHandlerContext.channel()));
+            message.setMsg("Ping success with channel ID: " + SocketService.getInstance().getKeyString(userSession));
+            message.setChannelId(SocketService.getInstance().getKeyString(userSession));
             message.setResponseCode(ResponseCode.RESPONSE_CODE_SUCCESS);
             MyChannelWSGroup.getInstance().sendMessage(channelHandlerContext.channel(), message.toJson());
-            LOG.info("[Client Ping] Ping success with channel ID: {}", MyChannelWSGroup.getInstance().getIdChannel(channelHandlerContext.channel()));
-        }
-        else {
+            LOG.info("[Client Ping] Ping success with channel ID: {}", SocketService.getInstance().getKeyString(userSession));
+        } else {
             LOG.info("[Client Ping] Token invalid");
             sendErrorMsg(channelHandlerContext, message, "Token invalid");
         }
@@ -67,11 +64,11 @@ public class ClientHandler {
         if (userSession != null) {
             handleCacheClientSession(userSession, channelHandlerContext);
             message.setData(new ClientInfoResponse());
-            message.setMsg("Verify success with channel ID: " + MyChannelWSGroup.getInstance().getIdChannel(channelHandlerContext.channel()));
-            message.setChannelId(MyChannelWSGroup.getInstance().getIdChannel(channelHandlerContext.channel()));
+            message.setMsg("Verify success with channel ID: " + SocketService.getInstance().getKeyString(userSession));
+            message.setChannelId(SocketService.getInstance().getKeyString(userSession));
             message.setResponseCode(ResponseCode.RESPONSE_CODE_SUCCESS);
             MyChannelWSGroup.getInstance().sendMessage(channelHandlerContext.channel(), message.toJson());
-            LOG.info("[Client Verify] Verify success with channel ID: " + MyChannelWSGroup.getInstance().getIdChannel(channelHandlerContext.channel()));
+            LOG.info("[Client Verify] Verify success with channel ID: {}", SocketService.getInstance().getKeyString(userSession));
         } else {
             LOG.info("[Client Verify Token] Token invalid");
             sendErrorMsg(channelHandlerContext, message, "Token invalid");
@@ -91,15 +88,9 @@ public class ClientHandler {
     }
 
     private void handleCacheClientSession(UserSession userSession, ChannelHandlerContext channelHandlerContext) {
-        Long appId = userSession.getAppId();
-        Long channelId = userSession.getChannelId();
-        String socketChannelId = MyChannelWSGroup.getInstance().getIdChannel(channelHandlerContext.channel());
+        String keyString = SocketService.getInstance().getKeyString(userSession);
 
-        String md5ChannelId = md5Hex(socketChannelId);
-        String keyString = RedisService.getInstance().getKeyString(appId, channelId, md5ChannelId);
-        RedisService.getInstance().handleUpdateChannel(keyString, MyChannelWSGroup.getInstance().getIdChannel(channelHandlerContext.channel()));
-
-        ClientChannel channel = SocketService.getInstance().getClientChannel(md5ChannelId);
+        ClientChannel channel = SocketService.getInstance().getClientChannel(keyString);
         if (channel != null) {
             channel.setTime(System.currentTimeMillis());
             channel.setChannel(channelHandlerContext.channel());
@@ -107,18 +98,7 @@ public class ClientHandler {
             ClientChannel clientChannel = new ClientChannel();
             clientChannel.setChannel(channelHandlerContext.channel());
             clientChannel.setTime(System.currentTimeMillis());
-            SocketService.getInstance().addClientChannel(md5ChannelId, clientChannel);
+            SocketService.getInstance().addClientChannel(keyString, clientChannel);
         }
-    }
-
-    public void handleDeleteClientSession(UserSession userSession, ChannelHandlerContext channelHandlerContext) {
-        Long appId = userSession.getAppId();
-        Long channelId = userSession.getChannelId();
-        String socketChannelId = MyChannelWSGroup.getInstance().getIdChannel(channelHandlerContext.channel());
-
-        String md5ChannelId = md5Hex(socketChannelId);
-        String keyString = RedisService.getInstance().getKeyString(appId, channelId, md5ChannelId);
-
-        RedisService.getInstance().deleteByKey(keyString);
     }
 }

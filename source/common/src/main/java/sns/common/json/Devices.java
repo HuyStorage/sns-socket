@@ -8,8 +8,8 @@ public class Devices {
     public static final int BACKEND_PLATFORM = 3;
 
 
-    public static final String BACKEND_APP="BACKEND_APP";
-    public static final String CLIENT_APP="CLIENT_APP";
-    public static final String SOCKET_APP="SOCKET_APP";
-    public static final String BACKEND_SOCKET_APP="BACKEND_SOCKET_APP";
+    public static final String BACKEND_APP = "BACKEND_APP";
+    public static final String CLIENT_APP = "CLIENT_APP";
+    public static final String SOCKET_APP = "SOCKET_APP";
+    public static final String BACKEND_SOCKET_APP = "BACKEND_SOCKET_APP";
 }

@@ -28,10 +28,6 @@ public class RedisService {
     private final SimpleDateFormat DATE_FORMAT;
 
 
-    public String getKeyString(Long appId,Long channelId, String clientSocketId) {
-        return appId + "_" + channelId + "_"+ clientSocketId;
-    }
-
     private RedisService() {
         int maxSize = SocketService.getInstance().getIntResource("server.redis.threads.size");
         int redisType = SocketService.getInstance().getIntResource("redis.type");

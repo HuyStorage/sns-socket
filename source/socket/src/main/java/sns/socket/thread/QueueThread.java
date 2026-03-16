@@ -8,11 +8,10 @@ import sns.socket.cmd.ResponseCode;
 import sns.socket.handler.MyChannelWSGroup;
 import sns.socket.model.ClientChannel;
 import sns.socket.model.event.NotificationEvent;
-import sns.socket.model.push.PushNotiRequest;
-import sns.socket.redis.RedisService;
 import sns.socket.utils.SocketService;
 import sns.thread.AbstractRunable;
 
+import java.util.List;
 
 public class QueueThread extends AbstractRunable {
     private static final Logger LOG = org.apache.logging.log4j.LogManager.getLogger(QueueThread.class);
@@ -73,32 +72,52 @@ public class QueueThread extends AbstractRunable {
      */
     private void handleBroadcastNoti(Message message) {
         NotificationEvent notificationEvent = message.getDataObject(NotificationEvent.class);
-        if (notificationEvent != null && notificationEvent.getAppId() != null && notificationEvent.getChannelId() != null) {
-            ClientChannel clientChannel = SocketService.getInstance().getClientChannel(notificationEvent.getSocketId());
-            if (clientChannel != null) {
-                PushNotiRequest pushNotiRequest = new PushNotiRequest();
-                pushNotiRequest.setApp(notificationEvent.getAppId().toString());
-                pushNotiRequest.setMessage(notificationEvent.getMessage());
-
-                Message messagePost = new Message();
-                messagePost.setCmd(Command.CLIENT_RECEIVED_PUSH_NOTIFICATION);
-                messagePost.setApp(Devices.BACKEND_SOCKET_APP);
-                messagePost.setResponseCode(ResponseCode.RESPONSE_CODE_SUCCESS);
-                messagePost.setData(pushNotiRequest);
-
-                MyChannelWSGroup.getInstance().sendMessage(clientChannel.getChannel(), message.toJson());
+        if (notificationEvent != null && message.getTenantId() != null) {
+            String prefixKey = message.getTenantId() + "_" + notificationEvent.getApp() + "_";
+            String key = SocketService.getInstance().getKeyString(message.getTenantId(), notificationEvent.getApp(), notificationEvent.getUserId());
+            List<ClientChannel> clientChannels = SocketService.getInstance().getClientChannelsByPrefix(prefixKey);
+            if (!clientChannels.isEmpty()) {
+                Message messagePost = createMessage(Command.CLIENT_RECEIVED_PUSH_NOTIFICATION, Devices.BACKEND_SOCKET_APP, notificationEvent.getPayload(), ResponseCode.RESPONSE_CODE_SUCCESS);
+                for (ClientChannel clientChannel : clientChannels) {
+                    if (clientChannel == null || clientChannel.getChannel() == null || !clientChannel.getChannel().isActive()) {
+                        continue;
+                    }
+                    MyChannelWSGroup.getInstance().sendMessage(clientChannel.getChannel(), messagePost.toJson());
+                }
             } else {
-                LOG.debug("Not found channel: {}", notificationEvent.getChannelId());
+                LOG.debug("Not found channel: {}", key);
             }
         }
     }
 
-    private Message createMessage(String cmd, String app, Object data, String msg, int responseCode) {
+//    private void handleSendNoti(Message message) {
+//        NotificationEvent notificationEvent = message.getDataObject(NotificationEvent.class);
+//        if (notificationEvent != null && message.getTenantId() != null) {
+//            String key = SocketService.getInstance().getKeyString(message.getTenantId(), notificationEvent.getApp(), notificationEvent.getUserId());
+//            ClientChannel clientChannel = SocketService.getInstance().getClientChannel(key);
+//            if (clientChannel != null) {
+//                PushNotiRequest pushNotiRequest = new PushNotiRequest();
+//                pushNotiRequest.setCmd(notificationEvent.getCmd());
+//                pushNotiRequest.setData(notificationEvent.getMessage());
+//
+//                Message messagePost = createMessage(Command.CLIENT_RECEIVED_PUSH_NOTIFICATION, Devices.BACKEND_SOCKET_APP, pushNotiRequest, ResponseCode.RESPONSE_CODE_SUCCESS);
+//                messagePost.setCmd(Command.CLIENT_RECEIVED_PUSH_NOTIFICATION);
+//                messagePost.setApp(Devices.BACKEND_SOCKET_APP);
+//                messagePost.setResponseCode(ResponseCode.RESPONSE_CODE_SUCCESS);
+//                messagePost.setData(pushNotiRequest);
+//
+//                MyChannelWSGroup.getInstance().sendMessage(clientChannel.getChannel(), messagePost.toJson());
+//            } else {
+//                LOG.debug("Not found channel: {}", key);
+//            }
+//        }
+//    }
+
+    private Message createMessage(String cmd, String app, Object data, int responseCode) {
         Message message = new Message();
         message.setCmd(cmd);
         message.setApp(app);
         message.setData(data);
-        message.setMsg(msg);
         message.setResponseCode(responseCode);
         return message;
     }

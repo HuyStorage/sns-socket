@@ -5,8 +5,7 @@ import sns.socket.model.ABasicModel;
 
 @Data
 public class NotificationEvent extends ABasicModel {
-    private String message;
-    private Long appId;
-    private Long channelId;
-    private String socketId;
+    private String app; // MASTER, TENANT, USER
+    private Long userId;
+    private Object payload;
 }

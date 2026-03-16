@@ -1,21 +1,23 @@
 package sns.socket.utils;
 
-import io.netty.channel.Channel;
 import lombok.Getter;
 import org.apache.logging.log4j.Logger;
 import sns.common.utils.ConfigurationService;
+import sns.socket.jwt.UserSession;
 import sns.socket.model.ClientChannel;
-import sns.socket.redis.RedisService;
 import sns.thread.WorkerPool;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SocketService {
     private static final Logger LOG = org.apache.logging.log4j.LogManager.getLogger(SocketService.class);
     private final int ONE_MINUTE = 60 * 1000;
-    private ConcurrentHashMap<String, ClientChannel> userChannel = new ConcurrentHashMap<>();
+    // key: {tenantId}_{userKind}_{userId}
+    private final ConcurrentHashMap<String, ClientChannel> userChannel = new ConcurrentHashMap<>();
     private static SocketService instance = null;
     private final ConfigurationService config;
     private final WorkerPool workerPool;
@@ -34,10 +36,6 @@ public class SocketService {
             instance = new SocketService();
         }
         return instance;
-    }
-
-    public void removeChannel(Channel channel) {
-        userChannel.remove(getIdChannel(channel));
     }
 
     public String getStringResource(String key) {
@@ -73,10 +71,9 @@ public class SocketService {
         LOG.info("[SocketService] >>> addClientChannel: userId=" + userId + ", channelId=" + channelId);
     }
 
-    public void removeClientChannel(String userId) {
-        if (userChannel.containsKey(userId)) {
-            userChannel.remove(userId);
-        }
+    public void removeClientChannel(UserSession userSession) {
+        String key = getKeyString(userSession.getTenantName(), userSession.getApp(), userSession.getId());
+        userChannel.remove(key);
     }
 
     public ClientChannel getClientChannel(String userId) {
@@ -86,10 +83,14 @@ public class SocketService {
         return null;
     }
 
-
-    public String getIdChannel(Channel channel) {
-        //return QueueService.getInstance().getStringResource("server.id")+"_"+channel.id().asLongText()+"_"+channel.id().asShortText();
-        return channel.id().asLongText() + "_" + channel.id().asShortText();
+    public List<ClientChannel> getClientChannelsByPrefix(String prefix) {
+        List<ClientChannel> result = new ArrayList<>();
+        userChannel.forEach((key, value) -> {
+            if (key != null && key.startsWith(prefix) && value != null) {
+                result.add(value);
+            }
+        });
+        return result;
     }
 
     public void scanAndRemoveChannel() {
@@ -108,5 +109,13 @@ public class SocketService {
 
     public int countChannelOrder() {
         return userChannel.size();
+    }
+
+    public String getKeyString(String tenantId, String app, Long userId) {
+        return tenantId + "_" + app + "_" + userId;
+    }
+
+    public String getKeyString(UserSession userSession) {
+        return userSession.getTenantName() + "_" + userSession.getApp() + "_" + userSession.getId();
     }
 }
